@@ -78,3 +78,30 @@ test('user typed addresses', () => {
   assert.equal(parseUserUrl('hello'), null);
   assert.equal(parseUserUrl('javascript:alert(1)'), null);
 });
+
+test('Visible scope: a site rule never makes a background tab reload', () => {
+  const r = makeRule('https://news.example.com/', 'site', 10);
+  const s = normalizeSettings({ enabled: true, defaultInterval: 30, scope: 'active', rules: [r] });
+  const fg = { url: 'https://news.example.com/a', active: true, windowId: 1 };
+  const bg = { url: 'https://news.example.com/b', active: false, windowId: 1 };
+  assert.equal(planForTab(bg, s), null);
+  assert.deepEqual(planForTab(fg, s), { interval: 10, source: 'rule', ruleId: r.id });
+  // Active tab of a minimized window is not visible.
+  assert.equal(planForTab(fg, s, { minimizedWindows: new Set([1]) }), null);
+  assert.equal(planForTab(fg, s, { minimizedWindows: new Set([2]) }).interval, 10);
+});
+
+test('Rules-only scope reloads rule tabs in the background; discarded tabs never', () => {
+  const r = makeRule('https://news.example.com/', 'site', 10);
+  const s = normalizeSettings({ enabled: true, scope: 'rules', rules: [r] });
+  assert.equal(planForTab({ url: 'https://news.example.com/b', active: false }, s).interval, 10);
+  assert.equal(planForTab({ url: 'https://news.example.com/b', active: false, discarded: true }, s), null);
+});
+
+test('path rule matches on a path boundary', () => {
+  const p = makeRule('https://example.com/dash', 'prefix', 20);
+  assert.equal(matchRule('https://example.com/dash', [p])?.id, p.id);
+  assert.equal(matchRule('https://example.com/dash/x', [p])?.id, p.id);
+  assert.equal(matchRule('https://example.com/dash?y=1', [p])?.id, p.id);
+  assert.equal(matchRule('https://example.com/dashboard', [p]), null);
+});

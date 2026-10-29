@@ -19,17 +19,17 @@ export const SCOPES = {
   active: {
     label: 'Visible tab',
     short: 'Visible',
-    desc: 'Only the tab you are looking at, in each window. Switching tabs restarts the countdown.',
+    desc: 'Only the tab you are looking at, in each window (minimized windows are skipped). Site rules change its interval but never reload background tabs.',
   },
   all: {
     label: 'All tabs',
     short: 'All tabs',
-    desc: 'Every open web tab. Sleeping (discarded) tabs are left alone.',
+    desc: 'Every open web tab, using its site rule interval if it has one. Sleeping (discarded) tabs are left alone.',
   },
   rules: {
     label: 'Site rules only',
     short: 'Rules only',
-    desc: 'Nothing reloads unless a site rule matches the page.',
+    desc: 'Only pages with a site rule reload, even in background tabs. Everything else is left alone.',
   },
 };
 
@@ -225,8 +225,13 @@ export function ruleMatches(rule, url) {
       const host = siteHost(u.hostname);
       return host === rule.host || host.endsWith(`.${rule.host}`);
     }
-    case 'prefix':
-      return `${u.origin}${u.pathname}${u.search}`.startsWith(rule.url);
+    case 'prefix': {
+      // Match on a path boundary: /dash covers /dash, /dash/x and /dash?y but not /dashboard.
+      const full = `${u.origin}${u.pathname}${u.search}`;
+      if (!full.startsWith(rule.url)) return false;
+      const next = full.charAt(rule.url.length);
+      return !next || rule.url.endsWith('/') || next === '/' || next === '?';
+    }
     case 'page':
       return `${u.origin}${u.pathname}${u.search}` === rule.url;
     default:
@@ -261,17 +266,28 @@ export function describeRule(rule) {
 
 /**
  * Decide whether/how a tab should be reloaded.
+ *
+ * The scope decides WHICH tabs are eligible; a matching rule only decides HOW
+ * OFTEN (or "never"). So with the Visible scope a site rule changes the visible
+ * tab's interval but never makes a background tab on that site reload.
+ *
+ * `ctx.minimizedWindows` (Set of windowIds): tabs there are not visible.
  * Returns { interval, source: 'rule'|'default', ruleId } or null.
  */
-export function planForTab(tab, settings) {
-  if (!tab || !isReloadableUrl(tab.url)) return null;
+export function planForTab(tab, settings, ctx = {}) {
+  if (!tab || !isReloadableUrl(tab.url) || tab.discarded) return null;
   const rule = matchRule(tab.url, settings.rules);
-  if (rule) {
-    if (rule.action === 'skip') return null;
-    return { interval: rule.interval, source: 'rule', ruleId: rule.id };
+  if (rule?.action === 'skip') return null;
+
+  if (settings.scope === 'active') {
+    const visible = tab.active && !ctx.minimizedWindows?.has(tab.windowId);
+    if (!visible) return null;
+  } else if (settings.scope === 'rules') {
+    if (!rule) return null;
   }
-  const def = { interval: settings.defaultInterval, source: 'default', ruleId: null };
-  if (settings.scope === 'all') return tab.discarded ? null : def;
-  if (settings.scope === 'active') return tab.active ? def : null;
-  return null;
+  // scope 'all': every (non-discarded) web tab is eligible.
+
+  return rule
+    ? { interval: rule.interval, source: 'rule', ruleId: rule.id }
+    : { interval: settings.defaultInterval, source: 'default', ruleId: null };
 }

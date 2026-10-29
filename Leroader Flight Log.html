@@ -1,0 +1,525 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Leroader Flight Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: a mission-control flight log. One glowing spine runs down the page; every event hangs off it at its real T+ second. */
+:root {
+  color-scheme: dark;
+  --void: #060912;
+  --hull: #0c1220;
+  --hull-2: #111a2e;
+  --line: #1f2c47;
+  --text: #dbe6f5;
+  --mute: #7d8fae;
+  --ion: #5ee6ff;      /* progress, build */
+  --flare: #ffb347;    /* friction, challenges */
+  --pulse: #a798ff;    /* human interventions */
+  --nominal: #6cf0b4;  /* passing, shipped */
+  --fault: #ff6b7d;    /* failures */
+  --display: "Chakra Petch", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--void);
+  background-image:
+    radial-gradient(1200px 500px at 85% -10%, rgba(94,230,255,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(167,152,255,.08), transparent 60%);
+  color: var(--text);
+  font: 400 16px/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: .01em; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.label { font: 500 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--mute); }
+
+/* HUD */
+.hud {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: 10px max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(6,9,18,.86); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--void); }
+.hud-in { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.clock { font: 600 22px/1 var(--mono); color: var(--ion); min-width: 9ch; }
+.phase-now { font: 600 13px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
+.track { flex: 1 1 200px; min-width: 0; height: 6px; background: var(--hull-2); border-radius: 3px; position: relative; overflow: hidden; }
+.track i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--pulse), var(--ion)); border-radius: 3px; }
+
+/* hero */
+.hero { padding-block: 56px 28px; }
+.hero h1 { font-size: clamp(40px, 8vw, 84px); line-height: .95; font-weight: 700; margin-top: 14px; }
+.hero h1 span { color: var(--ion); }
+.lede { max-width: 62ch; color: var(--mute); font-size: 18px; margin: 20px 0 0; }
+.brief {
+  margin-top: 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--hull); display: grid; gap: 10px;
+}
+.brief p { margin: 0; max-width: 78ch; }
+.brief q { color: var(--text); quotes: none; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font: 500 12px/1 var(--mono); padding: 6px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--mute); }
+
+/* telemetry */
+.tele { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-top: 28px; }
+.tele > div { background: var(--hull); padding: 16px 16px 14px; display: grid; gap: 8px; min-width: 0; }
+.tele b { font: 600 clamp(24px, 3.4vw, 34px)/1 var(--display); }
+.tele small { color: var(--mute); font-size: 12px; line-height: 1.35; }
+
+section { padding-block: 44px 8px; }
+section > header { display: grid; gap: 10px; margin-bottom: 22px; }
+section h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 600; }
+section header p { margin: 0; color: var(--mute); max-width: 66ch; }
+
+/* phase bar */
+.phasebar { display: flex; height: 56px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.phasebar > div { display: grid; align-content: center; padding: 0 12px; min-width: 0; overflow: hidden; }
+.phasebar b { font: 600 13px/1.2 var(--display); white-space: nowrap; }
+.phasebar span { font: 400 11px/1.2 var(--mono); opacity: .8; white-space: nowrap; }
+.ph-recon { background: #17304a; color: #bfe9ff; }
+.ph-build { background: #14405a; color: #cdf6ff; }
+.ph-verify { background: #3a2c58; color: #e3dcff; }
+.ph-ship { background: var(--nominal); color: #052016; padding: 0 !important; }
+.phase-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 14px; }
+.phase-legend div { font-size: 14px; color: var(--mute); }
+.phase-legend strong { color: var(--text); font-family: var(--display); display: block; }
+
+/* filters */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.filters button {
+  font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--hull); color: var(--mute); border: 1px solid var(--line); border-radius: 999px;
+  padding: 10px 14px; min-height: 40px; cursor: pointer;
+}
+.filters button[aria-pressed="true"] { color: var(--void); background: var(--ion); border-color: var(--ion); }
+button:focus-visible { outline: 2px solid var(--ion); outline-offset: 2px; }
+
+/* timeline */
+.tl { position: relative; padding-left: 0; list-style: none; margin: 0; display: grid; gap: 0; }
+.tl::before { content: ""; position: absolute; left: 77px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(var(--pulse), var(--ion) 40%, var(--nominal)); opacity: .55; }
+.ev { display: grid; grid-template-columns: 62px 30px minmax(0, 1fr); gap: 0; padding: 9px 0; align-items: start; }
+.ev[hidden] { display: none !important; }
+.ev time { font: 500 12px/22px var(--mono); color: var(--mute); text-align: right; padding-right: 4px; }
+.ev .node { width: 12px; height: 12px; margin: 5px 0 0 9px; border-radius: 50%; background: var(--void); border: 2px solid var(--ion); position: relative; z-index: 1; }
+.ev[data-k="friction"] .node { border-color: var(--flare); box-shadow: 0 0 12px rgba(255,179,71,.6); }
+.ev[data-k="human"] .node { border-color: var(--pulse); box-shadow: 0 0 14px rgba(167,152,255,.7); background: var(--pulse); }
+.ev[data-k="test"] .node { border-color: var(--nominal); }
+.ev[data-k="fail"] .node { border-color: var(--fault); box-shadow: 0 0 12px rgba(255,107,125,.6); }
+.ev[data-k="ship"] .node { background: var(--nominal); border-color: var(--nominal); box-shadow: 0 0 16px rgba(108,240,180,.8); }
+.card { background: var(--hull); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; margin-left: 6px; }
+.card h3 { font-size: 16px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.card p { margin: 4px 0 0; color: var(--mute); font-size: 14.5px; overflow-wrap: anywhere; }
+.tag { font: 500 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; padding: 4px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.tag.build { color: var(--ion); } .tag.friction { color: var(--flare); } .tag.human { color: var(--pulse); }
+.tag.test { color: var(--nominal); } .tag.fail { color: var(--fault); } .tag.ship { color: var(--nominal); background: rgba(108,240,180,.12); }
+.ev[data-k="human"] .card { border-color: rgba(167,152,255,.5); }
+.ev[data-k="human"] .card p { color: var(--text); font-style: italic; }
+.ev.active .card { border-color: var(--ion); }
+.pbreak { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 18px 0 6px 0; }
+.pbreak span { font: 600 12px/1 var(--display); letter-spacing: .2em; text-transform: uppercase; color: var(--ion); white-space: nowrap; }
+.pbreak::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+
+/* anomalies */
+.anom { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.an { background: var(--hull); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.an h3 { font-size: 18px; font-weight: 600; }
+.an dl { margin: 0; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 6px 10px; font-size: 14px; }
+.an dt { font: 500 10.5px/22px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--mute); }
+.an dd { margin: 0; overflow-wrap: anywhere; }
+.an dd.fix { color: var(--nominal); }
+.an code, .card code { font: 400 12.5px var(--mono); background: var(--hull-2); padding: 1px 5px; border-radius: 4px; color: var(--ion); overflow-wrap: anywhere; }
+
+/* charts */
+.panel { background: var(--hull); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.panel + .panel { margin-top: 14px; }
+.panel h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.panel > p { margin: 0 0 14px; color: var(--mute); font-size: 14px; max-width: 70ch; }
+.chart { width: 100%; overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 520px; height: auto; }
+svg text { font-family: var(--mono); fill: var(--mute); font-size: 10.5px; }
+svg .ann { fill: var(--text); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+.two .panel + .panel { margin-top: 0; }
+.bars { display: grid; gap: 5px; }
+.bar { display: grid; grid-template-columns: 112px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font: 400 12px/1 var(--mono); color: var(--mute); }
+.bar div { height: 10px; background: var(--hull-2); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ion); }
+.bar i.t { background: var(--pulse); }
+.bar span:last-child { text-align: right; color: var(--text); }
+.bar span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.split { display: flex; height: 22px; border-radius: 6px; overflow: hidden; margin: 8px 0 10px; }
+.split i { display: block; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--mute); }
+.legend em { font-style: normal; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+/* results */
+.result { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.result ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 15px; }
+.result li::marker { color: var(--ion); }
+.install { font: 400 13px/1.7 var(--mono); background: var(--hull-2); border-radius: 8px; padding: 12px 14px; overflow-wrap: anywhere; color: var(--text); }
+.ok { color: var(--nominal); }
+.lessons { display: grid; gap: 10px; counter-reset: l; }
+.lessons div { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 14px 16px; background: var(--hull); border: 1px solid var(--line); border-radius: 8px; }
+.lessons div::before { counter-increment: l; content: "L" counter(l); font: 600 13px/24px var(--mono); color: var(--pulse); }
+.lessons b { font-family: var(--display); font-weight: 600; }
+.lessons p { margin: 2px 0 0; color: var(--mute); font-size: 14.5px; }
+footer { padding-block: 40px 56px; color: var(--mute); font-size: 13px; }
+footer a { color: var(--ion); }
+@media (max-width: 560px) {
+  .tl::before { left: 63px; }
+  .ev { grid-template-columns: 50px 28px minmax(0, 1fr); }
+  .bar { grid-template-columns: 84px minmax(0, 1fr) 36px; }
+  .an dl { grid-template-columns: 1fr; }
+  .an dt { line-height: 1.2; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .track i { transition: width .2s linear; }
+}
+</style>
+
+<div class="hud" role="status" aria-live="off">
+  <div class="hud-in">
+    <div class="clock" id="clock">T+00:00</div>
+    <div class="phase-now" id="phaseNow">Briefing</div>
+    <div class="track" aria-hidden="true"><i id="prog"></i></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="label">Hermes agent · session log · claude-opus-5-5 · 29 Oct 2026</div>
+    <h1>Leroader<br><span>Flight Log</span></h1>
+    <p class="lede">One prompt, 28 minutes 46 seconds, a working auto-reload extension for Brave and Chrome. This is the full trajectory: what the agent built, where it got stuck, and where the human changed course.</p>
+    <div class="brief">
+      <div class="label">Mission brief · T+00:00</div>
+      <p><q>Create me a Chrome (Brave) extension. When on, refresh the page every 30s by default. When off, do nothing. Modern options panel, no old-school scrollbars. Time chosen by touch-friendly UI, no text inputs, 5s up to 5 hours. Per-URL reload rules. Dark theme. New workspace in a local AI folder, name like "leroader".</q></p>
+      <div class="chips"><span class="chip">Manifest V3</span><span class="chip">touch-first</span><span class="chip">5s → 5h</span><span class="chip">per-site rules</span><span class="chip">dark only</span></div>
+    </div>
+    <div class="tele" id="tele"></div>
+  </header>
+
+  <section>
+    <header>
+      <div class="label">Trajectory</div>
+      <h2>Where the 1,726 seconds went</h2>
+      <p>The build took about a third of the time the verification did. Nearly seven of every ten seconds went to proving the extension worked in a real browser.</p>
+    </header>
+    <div class="phasebar" id="phasebar"></div>
+    <div class="phase-legend" id="phaseLegend"></div>
+  </section>
+
+  <section id="log">
+    <header>
+      <div class="label">Event log</div>
+      <h2>Second by second</h2>
+      <p>Timestamps come from the session's own message records. Filter to see only the friction, or only the moments the human stepped in.</p>
+    </header>
+    <div class="filters" id="filters" role="group" aria-label="Filter events"></div>
+    <ol class="tl" id="tl"></ol>
+  </section>
+
+  <section>
+    <header>
+      <div class="label">Anomalies</div>
+      <h2>Six things that went sideways</h2>
+      <p>Each problem, what actually caused it, and how it was closed.</p>
+    </header>
+    <div class="anom" id="anom"></div>
+  </section>
+
+  <section>
+    <header>
+      <div class="label">Telemetry</div>
+      <h2>The shape of the run</h2>
+    </header>
+    <div class="panel">
+      <h3>End-to-end test runs</h3>
+      <p>Each bar is one run of the 30-check browser test, in order. Dashed bars are runs that crashed before finishing. The suite went from 22 passing to 30 passing and finished green in both Chromium and Brave 156. The three runs at T+25:35 are shown as one bar.</p>
+      <div class="chart" id="runs"></div>
+    </div>
+    <div class="panel">
+      <h3>Model calls: how long each one thought</h3>
+      <p>Forty API calls. The tall bars are the big writes: architecture planning, the design system and the browser test file. The short ones are quick tool follow-ups.</p>
+      <div class="chart" id="calls"></div>
+      <div id="think"></div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>Lines per file</h3>
+        <p>Counted from the finished project. Violet marks test and tooling files.</p>
+        <div class="bars" id="files"></div>
+      </div>
+      <div class="panel">
+        <h3>Where the tokens went</h3>
+        <p>The agent re-read a growing context all session, so cache reads dwarf everything else.</p>
+        <div class="bars" id="tokens"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <header>
+      <div class="label">Landing</div>
+      <h2>What shipped</h2>
+    </header>
+    <div class="result">
+      <div class="panel">
+        <h3 class="ok">Pushed and verified</h3>
+        <p>Commit <span class="mono">fccb649</span> on <span class="mono">main</span> to the project's GitHub repository. The remote head was read back to confirm it matched.</p>
+        <div class="install">1. brave://extensions<br>2. Developer mode on<br>3. Load unpacked → the leroader folder<br>4. Pin it to the toolbar</div>
+      </div>
+      <div class="panel">
+        <h3>Features</h3>
+        <ul>
+          <li>On: visible tab reloads every 30s. Off: nothing runs.</li>
+          <li>Interval from 5s to 5h by slider, −/+ and quick chips.</li>
+          <li>Site and page rules from the popup or by tapping an open tab.</li>
+          <li>Scope: visible tab, all tabs, or rules only.</li>
+          <li>Countdown badge, optional hard reload, Alt+Shift+R toggle.</li>
+          <li>Dark settings page in its own tab, thin scrollbars, phone-width layout.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Known limits</h3>
+        <ul>
+          <li>Discarded (sleeping) tabs are skipped.</li>
+          <li>brave:// and other browser pages cannot be reloaded by any extension.</li>
+          <li>Screenshots were never looked at because the image tool failed. Layout was verified by measurement.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <header>
+      <div class="label">Debrief</div>
+      <h2>What this run teaches</h2>
+      <p>These are observations from reading the log, not claims from the agent.</p>
+    </header>
+    <div class="lessons">
+      <div><span><b>Scale the proof to the ask.</b><p>The request was a personal tool. The agent built a 292-line, 30-check browser test and spent about 68% of the run in the verify-and-debug phase. The user said so at T+25:56. A one-line "how much testing do you want?" at the start would have cut most of that.</p></span></div>
+      <div><span><b>Human nudges were short and decisive.</b><p>Three short messages, under 50 words in total, supplied the repo, challenged a silent retry loop, and stopped the polishing. Each one changed what the agent did next.</p></span></div>
+      <div><span><b>Fail loudly in tests.</b><p>The review of a swallowed-error wait loop led to a helper that reports how long the race lasted: 164 to 611 ms between the worker attaching and the extension APIs existing.</p></span></div>
+      <div><span><b>Measure when you cannot see.</b><p>With the vision tool down, the agent printed icon pixels as ASCII and measured popup height in the DOM. The popup was brought to 561px against a 600px limit without one screenshot.</p></span></div>
+      <div><span><b>Check summaries against the code.</b><p>The final message said the extension was "about 900 lines". Counting background, popup, options, shared and UI scripts gives 1,192 lines of JavaScript. Small, but the kind of drift worth catching.</p></span></div>
+    </div>
+  </section>
+
+  <footer>
+    Source: a Hermes agent session, read from a copy of its message records. Cost shown is the session's own estimate, not a billed amount.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var TOTAL = 1726;
+  function mmss(s) { s = Math.round(s); var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* ---------- telemetry tiles ---------- */
+  var calls = [
+    [65.2,5979],[3.8,276],[117.7,11414],[33.9,4676],[23.5,3110],[62.8,8545],[17.7,2202],[41.2,4772],[4.0,463],[47.3,6101],
+    [43.9,6263],[14.2,1292],[2.5,227],[2.3,177],[3.5,307],[21.9,2159],[15.5,1983],[1.4,94],[62.7,7726],[6.4,387],
+    [6.1,822],[26.7,2761],[6.9,723],[5.1,555],[14.0,1420],[7.2,701],[12.2,1233],[6.6,579],[26.2,2968],[3.3,330],
+    [1.2,70],[16.1,1742],[9.1,436],[5.3,675],[3.5,338],[9.5,975],[2.8,193],[9.3,993],[1.5,88],[9.9,895]
+  ];
+  var think = calls.reduce(function (a, c) { return a + c[0]; }, 0);
+  var tele = [
+    ["28:46", "wall-clock, prompt to push"],
+    ["96", "messages in the session"],
+    ["52", "tool calls"],
+    ["40", "model API calls"],
+    ["30/30", "browser checks, Chromium and Brave 156"],
+    ["2,388", "lines across 15 files"],
+    ["$3.38", "session's own cost estimate"],
+    ["3", "human interventions"]
+  ];
+  $("tele").innerHTML = tele.map(function (t) { return "<div><b class='mono'>" + t[0] + "</b><small>" + t[1] + "</small></div>"; }).join("");
+
+  /* ---------- phases ---------- */
+  var phases = [
+    { id: "recon", name: "Recon and plan", from: 0, to: 188, cls: "ph-recon", note: "Read the brief, loaded a design skill, checked for Brave, Node, PIL and a cached Playwright. A 118-second planning call set the architecture." },
+    { id: "build", name: "Build", from: 188, to: 525, cls: "ph-build", note: "Manifest, shared model, service worker, design system, popup, options page, icons and unit tests." },
+    { id: "verify", name: "Verify and debug", from: 525, to: 1701, cls: "ph-verify", note: "A real-browser test harness, thirteen full runs, repeated fix rounds and a mid-course review." },
+    { id: "ship", name: "Ship", from: 1701, to: 1726, cls: "ph-ship", note: "README, gitignore, commit, push, remote head checked." }
+  ];
+  $("phasebar").innerHTML = phases.map(function (p) {
+    var w = (p.to - p.from) / TOTAL * 100;
+    return "<div class='" + p.cls + "' style='width:" + w + "%' title='" + p.name + "'>" + (w > 8 ? "<b>" + p.name + "</b><span>" + Math.round(w) + "%</span>" : "") + "</div>";
+  }).join("");
+  $("phaseLegend").innerHTML = phases.map(function (p) {
+    return "<div><strong>" + p.name + " · " + mmss(p.from) + "–" + mmss(p.to) + " · " + Math.round((p.to - p.from) / TOTAL * 100) + "%</strong>" + p.note + "</div>";
+  }).join("");
+
+  /* ---------- events ---------- */
+  var KINDS = { build: "Build", friction: "Friction", human: "Human", test: "Test", fail: "Failure", ship: "Ship" };
+  var E = [
+    ["recon"],
+    [0,"human","Brief received","Auto-reload extension, touch-only intervals from 5s to 5h, per-URL rules, dark theme, workspace named something like “leroader”."],
+    [65,"build","First model call returns","65 seconds and 6k tokens of planning before any tool ran. Loaded the <code>frontend-design-taste</code> skill."],
+    [66,"build","Environment sweep","Looked for Brave and Chrome, Node 22, PIL and Playwright. Found Brave plus a cached Chromium under <code>ms-playwright</code>."],
+    [188,"build","Workspace created","A <code>leroader</code> folder with src, icons, tools and tests, then <code>git init</code>. The call before it was the longest of the run: 118s, 11.4k tokens."],
+    ["build"],
+    [222,"build","Manifest V3 and shared model","<code>shared.js</code> holds the interval scale, rule matching with site, prefix and page scopes, and formatting."],
+    [245,"build","Service worker","A 1-second tick loop keeps the MV3 worker alive while reloading is on, backed by a 30-second alarm. When off, nothing runs."],
+    [308,"build","Design system","Dark tokens, one accent, Lucide icons inlined, touch components: slider, steppers, chips, switches."],
+    [326,"build","Popup","Live countdown, master switch, “This site” and “This page” shortcuts."],
+    [419,"build","Options page","Opens in its own tab. Tap an open tab to add a rule. Typing an address is a hidden fallback."],
+    [477,"build","Icons drawn with PIL","On (green) and off (grey), 16 to 128px."],
+    [483,"friction","Vision tool fails","The image analyzer returned a 400 because its configured model was not available. The agent switched to printing the icon as ASCII pixels."],
+    [525,"test","Unit tests: 5 of 5","First run on the directory failed with MODULE_NOT_FOUND; running the file directly passed."],
+    ["verify"],
+    [590,"test","Browser test written","292 lines. Loads the unpacked extension into a real Chromium and counts reloads against a local server."],
+    [590,"friction","Wrong Chromium","Playwright wanted build 1194 and the cache held 1243. The test now finds the newest cached build and honours <code>BROWSER=brave</code>."],
+    [597,"human","Repo supplied","“here is repository remote created for this extention”, a GitHub remote for the project."],
+    [684,"fail","First full run: 22 of 30","Failures: default state, badge countdown, typed-address fallback, popup countdown, and layout at four widths."],
+    [725,"friction","Wrong service worker","The test grabbed the browser's own worker. Fix: choose the worker whose URL ends in <code>/background.js</code>."],
+    [802,"fail","28 of 30","The visible-tab scope check failed, and the options page overflowed at 390px by 55px."],
+    [818,"friction","“chrome is not defined”","The worker attaches 160 to 600 ms before extension APIs exist. A race, not a bug in the extension."],
+    [980,"fail","29 of 30","Only the 390px layout check is left."],
+    [992,"friction","Grid overflow, round one","Cause: single-column grids sized to their content's minimum width. Overflow 55px → 38px."],
+    [1087,"build","Grid overflow, fixed","Applied <code>minmax(0, 1fr)</code> to every list grid."],
+    [1155,"test","30 of 30","The first fully green run, at T+19:15."],
+    [1264,"fail","Popup too tall","The first run had measured the popup at 792px against a 600px limit. After a layout squeeze the fit check still failed, leaving 29 of 30."],
+    [1265,"human","Second opinion","The user pasted a review of the retry loop as <code>note.md</code>: “i kind of agree, right?” The review said the loop swallowed errors, never failed on timeout, and might be hiding the real problem."],
+    [1281,"build","Wait loop replaced","The agent agreed. New helper fails loudly and reports how long the race lasted, measured at 164 to 611 ms."],
+    [1296,"build","Popup header reworked","The settings button moved into the popup's top bar next to the master switch."],
+    [1535,"test","Three clean runs","Three consecutive full runs: 30 of 30 each, exit code 0."],
+    [1556,"human","Stop polishing","“what is taking so long? it's just a simple custom extention for personal usage, not corporate software :)))) dont over engineer it”"],
+    ["ship"],
+    [1701,"test","Chromium 30/30 and Brave 156 30/30","Popup measured at 561px, under the 600px limit. The Brave run used a throwaway profile."],
+    [1711,"ship","README and commit","Gitignore keeps test artifacts and <code>note.md</code> out. Commit <code>fccb649</code>."],
+    [1716,"ship","Pushed, remote confirmed","<code>git ls-remote</code> returned the same hash on <code>main</code>."],
+    [1726,"ship","Final report delivered","Install steps, features, limits, and an answer to the <code>note.md</code> question."]
+  ];
+  var tl = $("tl"), html = "";
+  var phaseNames = { recon: "Recon and plan", build: "Build", verify: "Verify and debug", ship: "Ship" };
+  E.forEach(function (e) {
+    if (e.length === 1) { html += "<li class='pbreak' data-break><span>" + phaseNames[e[0]] + "</span></li>"; return; }
+    html += "<li class='ev' data-t='" + e[0] + "' data-k='" + e[1] + "'><time>" + mmss(e[0]) + "</time><span class='node'></span>" +
+      "<div class='card'><h3><span class='tag " + e[1] + "'>" + KINDS[e[1]] + "</span>" + e[2] + "</h3><p>" + e[3] + "</p></div></li>";
+  });
+  tl.innerHTML = html;
+
+  var filters = [["all", "All"], ["friction", "Friction"], ["human", "Human"], ["fail", "Failures"], ["test", "Tests"], ["build", "Build"], ["ship", "Ship"]];
+  var fbox = $("filters");
+  fbox.innerHTML = filters.map(function (f, i) { return "<button type='button' data-f='" + f[0] + "' aria-pressed='" + (i === 0) + "'>" + f[1] + "</button>"; }).join("");
+  fbox.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button"); if (!b) return;
+    var f = b.getAttribute("data-f");
+    Array.prototype.forEach.call(fbox.children, function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    Array.prototype.forEach.call(tl.children, function (li) {
+      if (li.hasAttribute("data-break")) li.hidden = f !== "all";
+      else li.hidden = !(f === "all" || li.getAttribute("data-k") === f);
+    });
+  });
+
+  /* ---------- anomalies ---------- */
+  var A = [
+    ["The eyes went out", "Vision tool returned 400", "Image analysis was routed to a model that was not available.", "Printed icon pixels as ASCII, then measured every layout in the DOM: overflow, tap-target size, popup height."],
+    ["The browser that was not there", "Launch failed at T+9:50", "Playwright expected Chromium 1194. The cache held 1243 and 1223.", "Test finds the newest cached build, accepts a path override, and can drive real Brave."],
+    ["The wrong worker", "“Visible-tab scope” and others failing", "Extension tests attached to a different service worker, one the browser owns.", "Select the worker by URL: it must start with chrome-extension:// and end in /background.js."],
+    ["A race, not a bug", "<code>chrome is not defined</code>", "The worker is visible 164 to 611 ms before its extension APIs exist.", "First fix was a silent 100-try loop. After the user's review: a small, loud helper that reports the delay."],
+    ["The 55-pixel overflow", "Settings page spilled sideways at 390px", "Single-column grids grew to their content's minimum width.", "<code>minmax(0, 1fr)</code> on every list grid. Overflow went 55 → 38 → 0 over two rounds."],
+    ["The tall popup", "Content 792px tall, limit 600px", "Cards and picker stacked more than a toolbar popup can hold.", "Condensed the picker card and header, and corrected the test to read the true content height. Final reading: 561px."]
+  ];
+  $("anom").innerHTML = A.map(function (a) {
+    return "<article class='an'><h3>" + a[0] + "</h3><dl><dt>Symptom</dt><dd>" + a[1] + "</dd><dt>Cause</dt><dd>" + a[2] + "</dd><dt>Fix</dt><dd class='fix'>" + a[3] + "</dd></dl></article>";
+  }).join("");
+
+  /* ---------- run ribbon chart ---------- */
+  (function () {
+    var runs = [[22, 684, "T+11:24"], [0, 720, "T+12:00"], [28, 802, "T+13:22"], [0, 818, "T+13:38"], [29, 980, "T+16:20"], [29, 1070, "T+17:50"], [30, 1155, "T+19:15"], [29, 1264, "T+21:04"], [30, 1535, "T+25:35 ×3"], [30, 1701, "T+28:21 Chromium"], [30, 1701, "T+28:21 Brave"]];
+    var W = 800, H = 250, L = 34, R = 10, T = 22, B = 56, ph = H - T - B, bw = (W - L - R) / runs.length;
+    var s = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='Checks passed per end-to-end run'>";
+    [0, 10, 20, 30].forEach(function (v) {
+      var y = T + ph - v / 30 * ph;
+      s += "<line x1='" + L + "' x2='" + (W - R) + "' y1='" + y + "' y2='" + y + "' stroke='#1f2c47' stroke-width='1'/><text x='" + (L - 6) + "' y='" + (y + 3) + "' text-anchor='end'>" + v + "</text>";
+    });
+    runs.forEach(function (r, i) {
+      var x = L + i * bw + bw * .18, w = bw * .64, h = r[0] / 30 * ph, y = T + ph - h;
+      var col = r[0] === 30 ? "#6cf0b4" : r[0] === 0 ? "none" : "#a798ff";
+      if (r[0] === 0) {
+        s += "<rect x='" + x + "' y='" + (T + ph - 28) + "' width='" + w + "' height='28' rx='3' fill='none' stroke='#ff6b7d' stroke-dasharray='4 3'/><text x='" + (x + w / 2) + "' y='" + (T + ph - 11) + "' text-anchor='middle' style='fill:#ff6b7d'>✕</text>";
+      } else {
+        s += "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "' rx='3' fill='" + col + "'/><text class='ann' x='" + (x + w / 2) + "' y='" + (y - 6) + "' text-anchor='middle'>" + r[0] + "</text>";
+      }
+      var lab = r[2].split(" ");
+      s += "<text x='" + (x + w / 2) + "' y='" + (T + ph + 16) + "' text-anchor='middle'>" + lab[0] + "</text>";
+      if (lab[1]) s += "<text x='" + (x + w / 2) + "' y='" + (T + ph + 29) + "' text-anchor='middle'>" + lab.slice(1).join(" ") + "</text>";
+    });
+    s += "</svg>";
+    $("runs").innerHTML = s;
+  })();
+
+  /* ---------- API call chart ---------- */
+  (function () {
+    var W = 800, H = 230, L = 36, R = 8, T = 24, B = 34, ph = H - T - B, bw = (W - L - R) / calls.length, max = 120;
+    var s = "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='Latency of each of the 40 model calls in seconds'>";
+    [0, 30, 60, 90, 120].forEach(function (v) {
+      var y = T + ph - v / max * ph;
+      s += "<line x1='" + L + "' x2='" + (W - R) + "' y1='" + y + "' y2='" + y + "' stroke='#1f2c47'/><text x='" + (L - 6) + "' y='" + (y + 3) + "' text-anchor='end'>" + v + "s</text>";
+    });
+    calls.forEach(function (c, i) {
+      var h = c[0] / max * ph, x = L + i * bw + 1.5, w = bw - 3, y = T + ph - h;
+      var col = c[0] >= 60 ? "#ffb347" : c[0] >= 25 ? "#5ee6ff" : "#3b5a86";
+      s += "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "' rx='2' fill='" + col + "'><title>Call " + (i + 1) + ": " + c[0] + "s, " + c[1].toLocaleString() + " output tokens</title></rect>";
+      if (i % 5 === 0 || i === 39) s += "<text x='" + (x + w / 2) + "' y='" + (T + ph + 16) + "' text-anchor='middle'>#" + (i + 1) + "</text>";
+    });
+    [[0, "#1 · 65s"], [2, "#3 · 118s"], [5, "#6 · 63s"], [18, "#19 · 63s"]].forEach(function (a) {
+      var c = calls[a[0]], x = L + a[0] * bw + bw / 2, y = T + ph - c[0] / max * ph - 6;
+      s += "<text class='ann' x='" + (a[0] > 30 ? x - 4 : x + 4) + "' y='" + y + "' text-anchor='" + (a[0] > 30 ? "end" : "start") + "'>" + a[1] + "</text>";
+    });
+    s += "</svg>";
+    $("calls").innerHTML = s;
+    var other = TOTAL - think;
+    $("think").innerHTML = "<div class='split'><i style='width:" + (think / TOTAL * 100) + "%;background:#5ee6ff'></i><i style='width:" + (other / TOTAL * 100) + "%;background:#a798ff'></i></div>" +
+      "<div class='legend'><span><em style='background:#5ee6ff'></em>Model thinking and writing · " + Math.round(think) + "s (" + Math.round(think / TOTAL * 100) + "%)</span><span><em style='background:#a798ff'></em>Tools, browsers and tests running · " + Math.round(other) + "s (" + Math.round(other / TOTAL * 100) + "%)</span></div>";
+  })();
+
+  /* ---------- file + token bars ---------- */
+  function bars(el, rows, fmt) {
+    var max = Math.max.apply(null, rows.map(function (r) { return r[1]; }));
+    $(el).innerHTML = rows.map(function (r) {
+      return "<div class='bar'><span title='" + r[0] + "'>" + r[0] + "</span><div><i class='" + (r[2] ? "t" : "") + "' style='width:" + (r[1] / max * 100) + "%'></i></div><span>" + fmt(r[1]) + "</span></div>";
+    }).join("");
+  }
+  bars("files", [
+    ["options.js", 346], ["tests/e2e.mjs", 292, 1], ["src/shared.js", 277], ["src/ui.css", 267], ["background.js", 220], ["options.css", 218],
+    ["popup.js", 178], ["src/ui.js", 171], ["options.html", 95], ["tests/unit", 80, 1], ["popup.css", 65], ["tools/icons.py", 60, 1], ["popup.html", 55], ["manifest.json", 39], ["README.md", 25]
+  ], function (v) { return v; });
+  bars("tokens", [["Cache reads", 4420278], ["Cache writes", 153299], ["Output", 86650], ["Fresh input", 88]], function (v) { return v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "k" : v; });
+
+  /* ---------- HUD: clock follows the event nearest the top ---------- */
+  var evs = Array.prototype.slice.call(tl.querySelectorAll(".ev"));
+  var prog = $("prog"), clock = $("clock"), pn = $("phaseNow");
+  function phaseAt(t) { for (var i = phases.length - 1; i >= 0; i--) if (t >= phases[i].from) return phases[i].name; return "Briefing"; }
+  function update() {
+    var line = window.innerHeight * 0.35, cur = null, first = evs[0].getBoundingClientRect();
+    if (first.top > line) { clock.textContent = "T+00:00"; pn.textContent = "Briefing"; prog.style.width = "0%"; evs.forEach(function (e) { e.classList.remove("active"); }); return; }
+    evs.forEach(function (e) {
+      if (e.hidden) return;
+      if (e.getBoundingClientRect().top <= line) cur = e;
+    });
+    evs.forEach(function (e) { e.classList.toggle("active", e === cur); });
+    if (cur) {
+      var t = +cur.getAttribute("data-t");
+      clock.textContent = "T+" + mmss(t); pn.textContent = phaseAt(t); prog.style.width = (t / TOTAL * 100) + "%";
+    }
+  }
+  var raf = 0;
+  window.addEventListener("scroll", function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; update(); }); }, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+})();
+</script>
+
+</body></html>

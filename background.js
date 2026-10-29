@@ -78,14 +78,19 @@ async function tick() {
   loopAlive = true;
 
   let tabs = [];
-  try { tabs = await chrome.tabs.query({}); } catch { /* window closing */ }
+  const minimizedWindows = new Set();
+  try {
+    const [allTabs, wins] = await Promise.all([chrome.tabs.query({}), chrome.windows.getAll()]);
+    tabs = allTabs;
+    for (const w of wins) if (w.state === 'minimized') minimizedWindows.add(w.id);
+  } catch { /* window closing */ }
   const now = Date.now();
   const seen = new Set();
   let changed = false;
 
   for (const tab of tabs) {
-    if (tab.discarded) continue; // asleep: it will load fresh when you open it
-    const plan = planForTab(tab, settings);
+    // Discarded (asleep) tabs get no plan: they load fresh when you open them.
+    const plan = planForTab(tab, settings, { minimizedWindows });
     if (!plan) continue;
     seen.add(tab.id);
 
@@ -163,6 +168,9 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.tabs.onActivated.addListener(() => { if (settings.enabled) kick(); });
+// Minimizing/restoring a window changes which tabs count as visible.
+chrome.windows.onBoundsChanged?.addListener(() => { if (settings.enabled) kick(); });
+chrome.windows.onFocusChanged.addListener(() => { if (settings.enabled) kick(); });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM && !loopAlive) kick();

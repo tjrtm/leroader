@@ -134,6 +134,12 @@ try {
   d = await delta(['/a', '/b'], 13500);
   check('Visible-tab scope: only the visible tab reloads', d['/b'] >= 2 && d['/a'] === 0, JSON.stringify(d));
 
+  // Regression: a whole-site rule (what the popup's "This site" makes) used to
+  // reload every tab on that site in the background, ignoring the Visible scope.
+  await setSettings({ rules: [{ id: 'rs', sourceUrl: `${BASE}/a`, mode: 'site', interval: 5 }] });
+  d = await delta(['/a', '/b'], 12500);
+  check('Visible-tab scope + site rule: background tab on that site does not reload', d['/b'] >= 2 && d['/a'] === 0, JSON.stringify(d));
+
   await setSettings({ scope: 'rules', rules: [{ id: 'r1', sourceUrl: `${BASE}/a`, mode: 'page', interval: 5 }] });
   d = await delta(['/a', '/b'], 12500);
   check('Rules-only scope: background rule page reloads, others do not', d['/a'] >= 2 && d['/b'] === 0, JSON.stringify(d));
