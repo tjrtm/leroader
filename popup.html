@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="dark">
+  <title>Leroader</title>
+  <link rel="stylesheet" href="src/ui.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <img src="icons/on-48.png" alt="" width="28" height="28">
+      <div class="brand-text">
+        <h1>Leroader</h1>
+        <p id="status" class="status">Off</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="round" id="openOptions" type="button" aria-label="All settings and site rules" title="All settings &amp; site rules"></button>
+      <div id="master"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card now" id="nowCard" aria-live="polite">
+      <div class="ring" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <circle class="ring-bg" cx="32" cy="32" r="28"/>
+          <circle class="ring-fg" id="ringFg" cx="32" cy="32" r="28"/>
+        </svg>
+        <span id="count">--</span>
+      </div>
+      <div class="now-meta">
+        <div id="host" class="host ellipsis">This tab</div>
+        <div id="why" class="why">Auto reload is off</div>
+      </div>
+      <button class="round" id="reloadNow" type="button" aria-label="Reload this tab now" title="Reload now"></button>
+    </section>
+
+    <section class="card interval-card" aria-labelledby="pickerTitle">
+      <div id="target"></div>
+      <p class="target-hint"><strong id="pickerTitle">Default interval</strong> <span id="targetHint"></span></p>
+      <div id="picker"></div>
+    </section>
+
+    <section class="card scope-card">
+      <h2 class="card-title" id="scopeTitle">Which tabs reload</h2>
+      <div id="scope"></div>
+    </section>
+  </main>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

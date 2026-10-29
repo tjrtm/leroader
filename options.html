@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Leroader settings</title>
+  <link rel="icon" href="icons/on-32.png">
+  <link rel="stylesheet" href="src/ui.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="appbar">
+    <div class="appbar-inner">
+      <div class="brand">
+        <img src="icons/on-48.png" alt="" width="36" height="36">
+        <div>
+          <h1>Leroader</h1>
+          <p class="status" id="status">Off</p>
+        </div>
+      </div>
+      <label class="master-label" for="master">
+        <span id="masterText">Auto reload</span>
+        <span id="master"></span>
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <div class="col">
+      <section class="card" aria-labelledby="defTitle">
+        <div class="section-head">
+          <div>
+            <h2 id="defTitle">Default interval</h2>
+            <p class="hint">How often tabs without a site rule reload.</p>
+          </div>
+        </div>
+        <div id="defaultPicker"></div>
+      </section>
+
+      <section class="card" aria-labelledby="scopeTitle">
+        <div class="section-head">
+          <div>
+            <h2 id="scopeTitle">Which tabs reload</h2>
+            <p class="hint">Site rules always apply to matching tabs while auto reload is on.</p>
+          </div>
+        </div>
+        <div class="tiles" id="scopeTiles" role="radiogroup" aria-labelledby="scopeTitle"></div>
+      </section>
+
+      <section class="card" aria-labelledby="behTitle">
+        <div class="section-head"><h2 id="behTitle">Behaviour</h2></div>
+        <div class="rows" id="behaviour"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card" aria-labelledby="rulesTitle">
+        <div class="section-head">
+          <div>
+            <h2 id="rulesTitle">Site rules <span class="count" id="ruleCount"></span></h2>
+            <p class="hint">Give specific sites their own interval, or exclude them.</p>
+          </div>
+        </div>
+        <div class="rules" id="rules"></div>
+
+        <div class="add-block">
+          <h3 class="sub-title">Add a rule from an open tab</h3>
+          <div class="tab-picker" id="tabPicker"></div>
+          <details class="manual" id="manual">
+            <summary>Or type an address</summary>
+            <form class="manual-form" id="manualForm" autocomplete="off" novalidate>
+              <input id="manualUrl" type="text" spellcheck="false" autocapitalize="off" inputmode="url" placeholder="example.com/dashboard" aria-label="Address">
+              <button class="btn primary" type="submit">Add</button>
+            </form>
+            <p class="hint" id="manualHint"></p>
+          </details>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="liveTitle">
+        <div class="section-head">
+          <div>
+            <h2 id="liveTitle">Reloading now</h2>
+            <p class="hint" id="liveHint">Live countdowns for every tab on a timer.</p>
+          </div>
+        </div>
+        <div class="live" id="live"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

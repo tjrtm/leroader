@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Leroader",
+  "short_name": "Leroader",
+  "version": "1.0.0",
+  "description": "Auto-reload tabs on a timer. Touch-friendly interval picker, per-site rules, dark UI.",
+  "minimum_chrome_version": "116",
+  "permissions": ["tabs", "storage", "alarms", "favicon"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Leroader: off",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/off-16.png",
+      "32": "icons/off-32.png",
+      "48": "icons/off-48.png",
+      "128": "icons/off-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/on-16.png",
+    "32": "icons/on-32.png",
+    "48": "icons/on-48.png",
+    "128": "icons/on-128.png"
+  },
+  "commands": {
+    "toggle-reload": {
+      "suggested_key": { "default": "Alt+Shift+R" },
+      "description": "Turn auto reload on or off"
+    }
+  }
+}

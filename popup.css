@@ -1,0 +1,65 @@
+body {
+  width: 368px;
+  max-height: 600px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.top {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.brand img { border-radius: 8px; }
+.brand h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.status { font-size: 12.5px; color: var(--muted); }
+.status.on { color: var(--accent-strong); }
+
+main { display: grid; gap: 8px; padding: 10px; }
+
+/* Live countdown card */
+.now { display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 12px; }
+.ring { position: relative; width: 58px; height: 58px; flex: none; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 5; }
+.ring-bg { stroke: var(--surface-3); }
+.ring-fg {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 175.93;
+  stroke-dashoffset: 175.93;
+  transition: stroke-dashoffset 0.9s linear;
+}
+#count { position: relative; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.now-meta { flex: 1; min-width: 0; }
+.host { font-weight: 600; font-size: 14.5px; }
+.why { font-size: 12.5px; color: var(--muted); }
+.now.idle .ring-fg { stroke: var(--line-strong); }
+.now.idle #count { color: var(--muted); }
+
+.interval-card, .scope-card { display: grid; gap: 10px; padding: 12px; }
+.target-hint {
+  margin: 0 2px; font-size: 12.5px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.target-hint strong { color: var(--text); font-weight: 600; }
+.interval-card .picker { gap: 8px; }
+.interval-card .slider-wrap { padding-bottom: 16px; }
+
+.bottom {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px 10px;
+}
+.kbd {
+  font: 600 11.5px var(--mono);
+  color: var(--muted);
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.kbd:empty { display: none; }
